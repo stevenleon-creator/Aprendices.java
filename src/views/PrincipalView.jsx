@@ -66,6 +66,16 @@ const ListaAprendices = () => {
     finally { setLoading(false); }
   };
 
+  const actualizarAprendiz = async () => {
+    if (!idFiltro) return;
+    try {
+      setLoading(true);
+      await axios.put(`${API_BASE}/${idFiltro}`, form, { headers: { "Content-Type": "application/json" } });
+      await fetchTodos();
+    } catch (e) { console.error("Error actualizando aprendiz:", e); }
+    finally { setLoading(false); }
+  };
+
   const eliminarPorId = async () => {
     if (!idFiltro) return;
     try { setLoading(true); await axios.delete(`${API_BASE}/${idFiltro}`); await fetchTodos(); }
@@ -94,6 +104,9 @@ const ListaAprendices = () => {
           </Button>
           <Button variant="contained" color="error" onClick={eliminarPorId} disabled={loading || !idFiltro}>
             ELIMINAR POR ID
+          </Button>
+          <Button variant="contained" color="primary" onClick={actualizarAprendiz} disabled={loading || !idFiltro}>
+          ACTUALIZAR
           </Button>
         </Stack>
 
