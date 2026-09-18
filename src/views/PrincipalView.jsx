@@ -5,6 +5,16 @@ import {
 } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
 import axios from "axios";
+  import {
+  getAprendices,
+  getAprendizPorId,
+  crearAprendiz as crearAprendizService,
+  actualizarAprendiz as actualizarAprendizService,
+  eliminarAprendiz as eliminarAprendizService,
+} from "../services/AprendicesServices"
+import TablaAprendices from "../components/TablaAprendiz";
+import FormularioAprendiz from "../components/FormularioAprendiz";
+import BarraAcciones from "../components/BarraAcciones";
 
 const theme = createTheme({
   palette: {
@@ -36,153 +46,77 @@ const ListaAprendices = () => {
   const [form, setForm] = useState({ nombre: "", apellido: "", email: "", telefono: "", direccion: "",programa:"",ficha:"",sede:"",jornada:"",genero:"" });
   const [idFiltro, setIdFiltro] = useState("");
 
-  const fetchTodos = async () => {
-    try {
-      setLoading(true);
-      const res = await axios.get(API_BASE);
-      setData(res.data || []);
-    } catch (e) {
-      console.error("Error cargando aprendices:", e);
-      setData([]);
-    } finally { setLoading(false); }
-  };
 
-  const fetchPorId = async () => {
-    if (!idFiltro) return;
-    try {
-      setLoading(true);
-      const res = await axios.get(`${API_BASE}/${idFiltro}`);
-      setData(res.data ? [res.data] : []);
-    } catch { setData([]); } finally { setLoading(false); }
-  };
 
-  const crearAprendiz = async () => {
-    try {
-      setLoading(true);
-      await axios.post(API_BASE, form, { headers: { "Content-Type": "application/json" } });
-      setForm({ nombre: "", apellido: "", email: "", telefono: "", direccion: "", programa: "", ficha: "", sede: "", jornada: "", genero: "" });
-      await fetchTodos();
-    } catch (e) { console.error("Error creando aprendiz:", e); }
-    finally { setLoading(false); }
-  };
+const fetchTodos = async () => {
+  try {
+    setLoading(true);
+    const data = await getAprendices();
+    setData(data);
+  } catch (e) {
+    console.error("Error cargando aprendices:", e);
+    setData([]);
+  } finally { setLoading(false); }
+};
 
-  const actualizarAprendiz = async () => {
-    if (!idFiltro) return;
-    try {
-      setLoading(true);
-      await axios.put(`${API_BASE}/${idFiltro}`, form, { headers: { "Content-Type": "application/json" } });
-      await fetchTodos();
-    } catch (e) { console.error("Error actualizando aprendiz:", e); }
-    finally { setLoading(false); }
-  };
+const fetchPorId = async () => {
+  if (!idFiltro) return;
+  try {
+    setLoading(true);
+    const data = await getAprendizPorId(idFiltro);
+    setData(data ? [data] : []);
+    if (data) setForm(data);
+  } catch { setData([]); } finally { setLoading(false); }
+};
 
-  const eliminarPorId = async () => {
-    if (!idFiltro) return;
-    try { setLoading(true); await axios.delete(`${API_BASE}/${idFiltro}`); await fetchTodos(); }
-    catch (e) { console.error("Error eliminando aprendiz:", e); }
-    finally { setLoading(false); }
-  };
+const crearAprendiz = async () => {
+  try {
+    setLoading(true);
+    await crearAprendizService(form);
+    setForm({ nombre: "", apellido: "", email: "", telefono: "", direccion: "", programa: "", ficha: "", sede: "", jornada: "", genero: "" });
+    await fetchTodos();
+  } catch (e) { console.error("Error creando aprendiz:", e); }
+  finally { setLoading(false); }
+};
+
+const actualizarAprendiz = async () => {
+  if (!idFiltro) return;
+  try {
+    setLoading(true);
+    await actualizarAprendizService(idFiltro, form);
+    setForm({ nombre: "", apellido: "", email: "", telefono: "", direccion: "", programa: "", ficha: "", sede: "", jornada: "", genero: "" });
+    await fetchTodos();
+  } catch (e) { console.error("Error actualizando aprendiz:", e); }
+  finally { setLoading(false); }
+};
+
+const eliminarPorId = async () => {
+  if (!idFiltro) return;
+  try { setLoading(true); await eliminarAprendizService(idFiltro); await fetchTodos(); }
+  catch (e) { console.error("Error eliminando aprendiz:", e); }
+  finally { setLoading(false); }
+};
 
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Box sx={{ mt: 4, px: { xs: 2, md: 4 } }}>
         {/* Barra de acciones */}
-        <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-          <Typography variant="h5" sx={{ flex: 1, fontWeight: 700, color: "text.primary" }}>
-            Aprendices
-          </Typography>
-          <Button variant="contained" color="primary" onClick={fetchTodos} disabled={loading}>
-            {loading ? "Cargando..." : "VER TODOS"}
-          </Button>
-          <TextField
-            size="small" label="ID" value={idFiltro} onChange={(e) => setIdFiltro(e.target.value)}
-            sx={{ ...inputSX, width: 140 }}
-          />
-          <Button variant="contained" color="secondary" onClick={fetchPorId} disabled={loading || !idFiltro}>
-            BUSCAR POR ID
-          </Button>
-          <Button variant="contained" color="error" onClick={eliminarPorId} disabled={loading || !idFiltro}>
-            ELIMINAR POR ID
-          </Button>
-          <Button variant="contained" color="primary" onClick={actualizarAprendiz} disabled={loading || !idFiltro}>
-          ACTUALIZAR
-          </Button>
-        </Stack>
+       <BarraAcciones
+        idFiltro={idFiltro}
+        setIdFiltro={setIdFiltro}
+        loading={loading}
+        onVerTodos={fetchTodos}
+        onBuscarPorId={fetchPorId}
+        onEliminarPorId={eliminarPorId}
+        onActualizar={actualizarAprendiz}
+        />
 
-        {/* Formulario creación */}
-        <Paper elevation={4} sx={{ p: 2, mb: 3, border: "1px solid #334155", bgcolor: "background.paper", maxWidth: 480, mx: "auto" }}>
-          <Typography sx={{ mb: 2, fontWeight: 600, color: "text.primary" }}>Crear aprendiz</Typography>
-          <Stack direction={{ xs: "column" }} spacing={2}>
-          <Stack direction="column" spacing={2} alignItems="center"></Stack>
-            <TextField label="Nombre" value={form.nombre}
-              onChange={(e) => setForm({ ...form, nombre: e.target.value })} sx={{ ...inputSX, flex: 1 }} />
-            <TextField label="Apellido" value={form.apellido}
-              onChange={(e) => setForm({ ...form, apellido: e.target.value })} sx={{ ...inputSX, flex: 1 }} />
-            <TextField label="Email" value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })} sx={{ ...inputSX, flex: 1.2 }} />
-            <TextField label="Teléfono" value={form.telefono}
-              onChange={(e) => setForm({ ...form, telefono: e.target.value })} sx={{ ...inputSX, flex: 1 }} />
-            <TextField label="Dirección" value={form.direccion}
-              onChange={(e) => setForm({ ...form, direccion: e.target.value })} sx={{ ...inputSX, flex: 1.6 }} />
-            <TextField label="Programa" value={form.programa}
-              onChange={(e) => setForm({ ...form, programa: e.target.value })} sx={{ ...inputSX, flex: 1 }} />
-            <TextField label="Ficha" value={form.ficha}
-              onChange={(e) => setForm({ ...form, ficha: e.target.value })} sx={{ ...inputSX, flex: 1 }} />
-            <TextField label="Sede" value={form.sede}
-              onChange={(e) => setForm({ ...form, sede: e.target.value })} sx={{ ...inputSX, flex: 1 }} />
-            <TextField label="Jornada" value={form.jornada}
-              onChange={(e) => setForm({ ...form, jornada: e.target.value })} sx={{ ...inputSX, flex: 1 }} />
-            <TextField label="Género" value={form.genero}
-              onChange={(e) => setForm({ ...form, genero: e.target.value })} sx={{ ...inputSX, flex: 1 }} />
-            <Button variant="contained" color="primary" onClick={crearAprendiz} disabled={loading}>
-              CREAR
-            </Button>
-          </Stack>
-        </Paper>
+        <FormularioAprendiz form={form} setForm={setForm} onCrear={crearAprendiz} loading={loading} />
+        <TablaAprendices data={data} />
 
-        {/* Tabla */}
-        <TableContainer component={Paper} elevation={3} sx={{ border: "1px solid #334155", bgcolor: "background.paper" }}>
-          <Table>
-            <TableHead>
-              <TableRow sx={{ background: "#22d3ee" }}>
-                {["ID","Nombre","Apellido","Email","Teléfono","Dirección","Programa","Ficha","Sede","Jornada","Género"].map((h) => (
-                  <TableCell key={h} sx={{ color: "#0b1220", fontWeight: 700 }}>{h}</TableCell>
-                ))}
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {data.map((row, i) => (
-                <TableRow
-                  key={row.id ?? i}
-                  sx={{
-                    backgroundColor: i % 2 === 0 ? "#0f172a" : "#111827",
-                    "&:hover": { backgroundColor: "#1f2937" }
-                  }}
-                >
-                  <TableCell sx={{ color: "text.primary" }}>{row.id}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{row.nombre}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{row.apellido}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{row.email}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{row.telefono}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{row.direccion}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{row.programa}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{row.ficha}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{row.sede}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{row.jornada}</TableCell>
-                  <TableCell sx={{ color: "text.primary" }}>{row.genero}</TableCell>
-                </TableRow>
-              ))}
-              {data.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={11} align="center" sx={{ color: "text.secondary" }}>
-                    Sin registros
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
+  
+        
       </Box>
     </ThemeProvider>
   );
